@@ -1,0 +1,31 @@
+services:
+  # --- Gateway App ---
+  gateway:
+    build:
+      context: .
+      target: be-skillforge # Builds the 'be-skillforge' stage from your Dockerfile
+    container_name: gateway-app
+    env_file: .env # Loads your .env file
+    ports:
+      - '${PORT}:${PORT}'
+    networks:
+      - skillforge-net
+
+  # --- AI Service ---
+  ai-service:
+    build:
+      context: .
+      target: ai-service # Builds the 'ai-service' stage from your Dockerfile
+    container_name: ai-service-app
+    env_file: .env # Loads your .env file
+    ports:
+      - '${AI_SERVICE_PORT}:${AI_SERVICE_PORT}'
+    depends_on:
+      - gateway # Still depends on gateway for the internal HTTP callback
+    networks:
+      - skillforge-net
+
+# --- Shared Network for app-to-app communication ---
+networks:
+  skillforge-net:
+    driver: bridge

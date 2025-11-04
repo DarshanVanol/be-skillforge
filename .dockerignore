@@ -1,0 +1,16 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Local environment
+.env
+.env.*
+
+# Node
+node_modules
+dist
+pnpm-debug.log
