@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { CommonConfigService } from './common-config.service';
 import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config.schema';

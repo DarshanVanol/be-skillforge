@@ -8,6 +8,10 @@ export class CommonConfigService {
 
   // --- Create your type-safe getters ---
 
+  get env(): string {
+    return this.configService.get<string>('NODE_ENV')!;
+  }
+
   get port(): number {
     return this.configService.get<number>('PORT')!;
   }
@@ -23,11 +27,21 @@ export class CommonConfigService {
     const host = this.configService.get<string>('MQ_HOST')!;
     const port = this.configService.get<number>('MQ_PORT')!;
 
+    const isDurableQueue =
+      this.configService.get<boolean>('MQ_QUEUE_DURABLE') ??
+      this.env === 'production';
+
+    const aiServiceQueue = this.configService.get<string>(
+      'MQ_AI_SERVICE_QUEUE',
+    )!;
+
     return {
       user,
       pass,
       host,
       port,
+      isDurableQueue,
+      aiServiceQueue,
       // A getter for the combined URL
       get url(): string {
         return `amqp://${user}:${pass}@${host}:${port}`;

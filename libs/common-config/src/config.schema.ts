@@ -13,4 +13,6 @@ export const validationSchema = Joi.object({
   MQ_PASS: Joi.string().required(),
   MQ_HOST: Joi.string().required(),
   MQ_PORT: Joi.number().required(),
+  MQ_QUEUE_DURABLE: Joi.boolean().default(true),
+  AI_SERVICE_QUEUE: Joi.string().default('ai_service_queue'),
 });

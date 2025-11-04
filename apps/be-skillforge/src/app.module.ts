@@ -15,9 +15,9 @@ import { CommonConfigModule, CommonConfigService } from '@app/common-config';
           transport: Transport.RMQ,
           options: {
             urls: [config.rabbitmq.url],
-            queue: 'ai_service_queue',
+            queue: config.rabbitmq.aiServiceQueue,
             queueOptions: {
-              durable: false,
+              durable: config.rabbitmq.isDurableQueue,
             },
           },
         }),
