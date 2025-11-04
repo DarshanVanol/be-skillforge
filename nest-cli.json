@@ -1,8 +1,41 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/be-skillforge/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/be-skillforge/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/be-skillforge",
+  "projects": {
+    "ai_service": {
+      "type": "application",
+      "root": "apps/ai_service",
+      "entryFile": "main",
+      "sourceRoot": "apps/ai_service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/ai_service/tsconfig.app.json"
+      }
+    },
+    "be-skillforge": {
+      "type": "application",
+      "root": "apps/be-skillforge",
+      "entryFile": "main",
+      "sourceRoot": "apps/be-skillforge/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/be-skillforge/tsconfig.app.json"
+      }
+    },
+    "common-config": {
+      "type": "library",
+      "root": "libs/common-config",
+      "entryFile": "index",
+      "sourceRoot": "libs/common-config/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common-config/tsconfig.lib.json"
+      }
+    }
   }
 }
