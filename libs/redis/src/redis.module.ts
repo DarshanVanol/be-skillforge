@@ -15,7 +15,7 @@ import {
     CacheModule.registerAsync({
       imports: [CommonConfigModule],
       inject: [CommonConfigService],
-      useFactory: async (config: CommonConfigService) => ({
+      useFactory: (config: CommonConfigService) => ({
         url: config.redis.url,
       }),
     }),

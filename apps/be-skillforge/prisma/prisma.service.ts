@@ -6,8 +6,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient } from '@data-access/ai-client';
-import { execSync } from 'child_process';
-import * as path from 'path';
 
 @Injectable()
 export class SkillforgePrismaService
