@@ -15,4 +15,14 @@ export const validationSchema = Joi.object({
   MQ_PORT: Joi.number().required(),
   MQ_QUEUE_DURABLE: Joi.boolean().default(true),
   AI_SERVICE_QUEUE: Joi.string().default('ai_service_queue'),
+
+  // Database
+  DATABASE_URL_SKILLFORGE: Joi.string().uri().required(),
+  DATABASE_URL_AI: Joi.string().uri().required(),
+
+  // Redis
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().allow('').optional(),
+  REDIS_TLS: Joi.boolean().default(false),
 });

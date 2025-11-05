@@ -20,7 +20,6 @@ export class CommonConfigService {
     return this.configService.get<number>('AI_SERVICE_PORT')!;
   }
 
-  // You can even group related variables
   get rabbitmq() {
     const user = this.configService.get<string>('MQ_USER')!;
     const pass = this.configService.get<string>('MQ_PASS')!;
@@ -45,6 +44,26 @@ export class CommonConfigService {
       // A getter for the combined URL
       get url(): string {
         return `amqp://${user}:${pass}@${host}:${port}`;
+      },
+    };
+  }
+
+  get redis() {
+    const host = this.configService.get<string>('REDIS_HOST')!;
+    const port = this.configService.get<number>('REDIS_PORT')!;
+    const password = this.configService.get<string>('REDIS_PASSWORD')!;
+    const tls = this.configService.get<boolean>('REDIS_TLS')!;
+
+    return {
+      host,
+      port,
+      password,
+      tls,
+      // A getter for the combined URL
+      get url(): string {
+        const authPart = password ? `:${password}@` : '';
+        const tlsPart = tls ? '?tls=true' : '';
+        return `redis://${authPart}${host}:${port}${tlsPart}`;
       },
     };
   }

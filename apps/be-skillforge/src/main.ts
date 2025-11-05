@@ -7,6 +7,7 @@ async function bootstrap() {
   const logger = new Logger(AppModule.name);
   const app = await NestFactory.create(AppModule);
   const configService = app.get(CommonConfigService);
+  app.enableShutdownHooks();
   await app.listen(configService.port, '0.0.0.0');
   logger.log(`Application is running on: ${await app.getUrl()}`);
 }

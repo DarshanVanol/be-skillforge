@@ -3,7 +3,8 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "moduleNameMapper": {
-    "^@app/common-config(|/.*)$": "<rootDir>/../../../libs/common-config/src/$1"
+    "^@app/common-config(|/.*)$": "<rootDir>/../../../libs/common-config/src/$1",
+    "^@data-access/ai-client(|/.*)$": "<rootDir>/../../../node_modules/.prisma/ai-client/$1"
   },
   "testRegex": ".e2e-spec.ts$",
   "transform": {

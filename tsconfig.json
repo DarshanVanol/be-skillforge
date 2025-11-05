@@ -22,9 +22,21 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/common-config": ["libs/common-config/src"],
-      "@app/common-config/*": ["libs/common-config/src/*"],
-      "@data-access/*": ["node_modules/.prisma/*"]
+      "@app/common-config": [
+        "libs/common-config/src"
+      ],
+      "@app/common-config/*": [
+        "libs/common-config/src/*"
+      ],
+      "@app/redis": [
+        "libs/redis/src"
+      ],
+      "@app/redis/*": [
+        "libs/redis/src/*"
+      ],
+      "@data-access/*": [
+        "node_modules/.prisma/*"
+      ]
     }
   }
 }
