@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 # Enable pnpm via corepack
 RUN corepack enable
 # Copy dependency manifests
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Install ALL dependencies (dev needed for build)
 RUN pnpm install --frozen-lockfile
 
@@ -14,6 +14,8 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 # Copy the rest of the source code
 COPY . .
+# Generate the Prisma clients for both services
+RUN pnpm run prisma:generate-all
 # Run the main build script from your root package.json
 RUN pnpm build
 # Prune dev dependencies, leaving only prod dependencies

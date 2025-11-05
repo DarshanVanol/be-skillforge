@@ -25,7 +25,17 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./apps/be-skillforge/test/jest-e2e.json",
-    "test:ai-e2e": "jest --config ./apps/ai_service/test/jest-e2e.json"
+    "test:ai-e2e": "jest --config ./apps/ai_service/test/jest-e2e.json",
+    "prisma:skillforge:generate": "prisma generate --schema=apps/be-skillforge/prisma/schema/base.prisma",
+    "prisma:ai:generate": "prisma generate --schema=apps/ai_service/prisma/schema/base.prisma",
+    "prisma:generate-all": "pnpm run prisma:skillforge:generate && pnpm run prisma:ai:generate",
+    "db:deploy:skillforge": "prisma migrate deploy --schema=apps/be-skillforge/prisma/schema",
+    "db:deploy:ai": "prisma migrate deploy --schema=apps/ai_service/prisma/schema",
+    "db:deploy-all": "pnpm run db:deploy:skillforge && pnpm run db:deploy:ai",
+    "db:migrate:skillforge": "prisma migrate dev --schema=apps/be-skillforge/prisma/schema",
+    "db:migrate:ai": "prisma migrate dev --schema=apps/ai_service/prisma/schema",
+    "db:status:skillforge": "prisma migrate status --schema=apps/be-skillforge/prisma/schema",
+    "db:status:ai": "prisma migrate status --schema=apps/ai_service/prisma/schema"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,9 +43,11 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/microservices": "^11.1.8",
     "@nestjs/platform-express": "^11.0.1",
+    "@prisma/client": "^6.18.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.9",
     "joi": "^18.0.1",
+    "prisma": "^6.18.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

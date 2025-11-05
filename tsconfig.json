@@ -22,12 +22,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/common-config": [
-        "libs/common-config/src"
-      ],
-      "@app/common-config/*": [
-        "libs/common-config/src/*"
-      ]
+      "@app/common-config": ["libs/common-config/src"],
+      "@app/common-config/*": ["libs/common-config/src/*"],
+      "@data-access/*": ["node_modules/.prisma/*"]
     }
   }
 }

@@ -3,9 +3,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CommonConfigModule, CommonConfigService } from '@app/common-config';
+import { SkillforgePrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
+    SkillforgePrismaModule,
     CommonConfigModule,
     ClientsModule.registerAsync([
       {
