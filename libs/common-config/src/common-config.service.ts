@@ -43,7 +43,7 @@ export class CommonConfigService {
       aiServiceQueue,
       // A getter for the combined URL
       get url(): string {
-        return `amqp://${user}:${pass}@${host}:${port}`;
+        return `amqps://${user}:${pass}@${host}:${port}`;
       },
     };
   }
