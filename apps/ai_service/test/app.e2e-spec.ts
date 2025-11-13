@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { AiServiceModule } from './../src/ai_service.module';
 
 describe('AiServiceController (e2e)', () => {
@@ -15,11 +14,11 @@ describe('AiServiceController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('should initialize the microservice', () => {
+    expect(app).toBeDefined();
   });
 });

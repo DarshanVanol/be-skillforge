@@ -10,7 +10,8 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
+    "target": "ES2024",
+    "lib": ["ES2024"],
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -22,21 +23,13 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/common-config": [
-        "libs/common-config/src"
-      ],
-      "@app/common-config/*": [
-        "libs/common-config/src/*"
-      ],
-      "@app/redis": [
-        "libs/redis/src"
-      ],
-      "@app/redis/*": [
-        "libs/redis/src/*"
-      ],
-      "@data-access/*": [
-        "node_modules/.prisma/*"
-      ]
+      "@app/common": ["libs/common/src"],
+      "@app/common-config": ["libs/common-config/src"],
+      "@app/common-config/*": ["libs/common-config/src/*"],
+      "@app/common/*": ["libs/common/src/*"],
+      "@app/redis": ["libs/redis/src"],
+      "@app/redis/*": ["libs/redis/src/*"],
+      "@data-access/*": ["node_modules/.prisma/*"]
     }
   }
 }

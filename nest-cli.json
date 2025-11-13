@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/be-skillforge/tsconfig.app.json"
       }
     },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    },
     "common-config": {
       "type": "library",
       "root": "libs/common-config",

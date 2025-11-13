@@ -1,10 +1,10 @@
 // apps/be-skillforge/src/prisma/prisma.module.ts
 import { Global, Module } from '@nestjs/common';
-import { SkillforgePrismaService } from './prisma.service';
+import { AiServicePrismaService } from './prisma.service';
 
 @Global()
 @Module({
-  providers: [SkillforgePrismaService],
-  exports: [SkillforgePrismaService],
+  providers: [AiServicePrismaService],
+  exports: [AiServicePrismaService],
 })
-export class SkillforgePrismaModule {}
+export class AiServicePrismaModule {}

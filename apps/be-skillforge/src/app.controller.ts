@@ -1,26 +1,19 @@
+import type { TestEventPayload, AiServiceResponse } from '@app/common';
 import { Controller, Get, Inject, Logger } from '@nestjs/common';
-import { AppService } from './app.service';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs'; // 1. Import firstValueFrom
+import { firstValueFrom } from 'rxjs';
 
 @Controller()
 export class AppController {
   private readonly logger = new Logger(AppController.name);
 
   constructor(
-    private readonly appService: AppService,
     @Inject('AI_SERVICE') private readonly aiServiceClient: ClientProxy,
   ) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
-
-  // 2. Make the method async
   @Get('test-mq')
   async testMessageQueue() {
-    const testData = {
+    const testData: TestEventPayload = {
       message: 'Hello from be-skillforge!',
       timestamp: new Date(),
     };
@@ -28,9 +21,11 @@ export class AppController {
     this.logger.log('🚀 SENDING REQUEST...');
 
     try {
-      // 3. Use .send() and await the response
       const response = await firstValueFrom(
-        this.aiServiceClient.send('test_event', testData),
+        this.aiServiceClient.send<AiServiceResponse<TestEventPayload>>(
+          'test_event',
+          testData,
+        ),
       );
 
       this.logger.log(`📬 RESPONSE RECEIVED: ${JSON.stringify(response)}`);
@@ -40,11 +35,12 @@ export class AppController {
         responseFromAiService: response,
       };
     } catch (error) {
+      const err = error as Error;
       this.logger.error(
-        `Error communicating with AI_SERVICE: ${error.message}`,
-        error.stack,
+        `Error communicating with AI_SERVICE: ${err.message}`,
+        err.stack,
       );
-      return { status: 'ERROR', message: error.message };
+      return { status: 'ERROR', message: err.message };
     }
   }
 }

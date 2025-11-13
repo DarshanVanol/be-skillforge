@@ -3,8 +3,11 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "moduleNameMapper": {
+    "^@app/common(|/.*)$": "<rootDir>/../../../libs/common/src/$1",
     "^@app/common-config(|/.*)$": "<rootDir>/../../../libs/common-config/src/$1",
-    "^@data-access/ai-client(|/.*)$": "<rootDir>/../../../node_modules/.prisma/ai-client/$1"
+    "^@app/redis(|/.*)$": "<rootDir>/../../../libs/redis/src/$1",
+    "^@data-access/ai-client(|/.*)$": "<rootDir>/../../../node_modules/.prisma/ai-client/$1",
+    "^@data-access/skillforge-client(|/.*)$": "<rootDir>/../../../node_modules/.prisma/skillforge-client/$1"
   },
   "testRegex": ".e2e-spec.ts$",
   "transform": {
