@@ -14,7 +14,8 @@ export const validationSchema = Joi.object({
   MQ_HOST: Joi.string().required(),
   MQ_PORT: Joi.number().required(),
   MQ_QUEUE_DURABLE: Joi.boolean().default(true),
-  AI_SERVICE_QUEUE: Joi.string().default('ai_service_queue'),
+  MQ_TLS: Joi.boolean().default(false),
+  MQ_AI_SERVICE_QUEUE: Joi.string().default('ai_service_queue'),
 
   // Database
   DATABASE_URL_SKILLFORGE: Joi.string().uri().required(),

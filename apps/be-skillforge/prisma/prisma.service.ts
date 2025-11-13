@@ -5,7 +5,7 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '@data-access/ai-client';
+import { PrismaClient } from '@data-access/skillforge-client';
 
 @Injectable()
 export class SkillforgePrismaService

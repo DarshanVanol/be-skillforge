@@ -72,6 +72,9 @@ importers:
       '@nestjs/testing':
         specifier: ^11.0.1
         version: 11.1.8(@nestjs/common@11.1.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(@nestjs/microservices@11.1.8)(@nestjs/platform-express@11.1.8)
+      '@types/cache-manager-ioredis':
+        specifier: ^2.0.8
+        version: 2.0.8
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.5
@@ -938,6 +941,12 @@ packages:
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
+  '@types/cache-manager-ioredis@2.0.8':
+    resolution: {integrity: sha512-H/qO70yhxDe7i8QfGIczOEL92au8eRj6gyAYLaNNDgITIlEPwkjsP+iJ8ZQ2KAMv7kTGp8BFsxlDlMr8tbu9Dg==}
+
+  '@types/cache-manager@2.10.3':
+    resolution: {integrity: sha512-PbaxAeU8SZhbVd6+IuepvyWN7KAjEThsrkdvITDxKAlN6/abIr3NW3WPzNLjJekqbVijg4YUYsyrVc84xXUHQw==}
+
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
@@ -961,6 +970,9 @@ packages:
 
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
+
+  '@types/ioredis@4.28.10':
+    resolution: {integrity: sha512-69LyhUgrXdgcNDv7ogs1qXZomnfOEnSmrmMFqKgt1XMJxmoOSG/u3wYy13yACIfKuMJ8IhKgHafDO3sx19zVQQ==}
 
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
@@ -4742,6 +4754,13 @@ snapshots:
       '@types/connect': 3.4.38
       '@types/node': 22.19.0
 
+  '@types/cache-manager-ioredis@2.0.8':
+    dependencies:
+      '@types/cache-manager': 2.10.3
+      '@types/ioredis': 4.28.10
+
+  '@types/cache-manager@2.10.3': {}
+
   '@types/connect@3.4.38':
     dependencies:
       '@types/node': 22.19.0
@@ -4774,6 +4793,10 @@ snapshots:
       '@types/serve-static': 1.15.10
 
   '@types/http-errors@2.0.5': {}
+
+  '@types/ioredis@4.28.10':
+    dependencies:
+      '@types/node': 22.19.0
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 

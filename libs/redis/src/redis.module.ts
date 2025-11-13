@@ -7,6 +7,7 @@ import {
 } from './redis-client.provider';
 import { RedisService } from './redis.service';
 import { RedisHealthController } from './redis.health.controller';
+import * as redisStore from 'cache-manager-ioredis';
 
 @Global()
 @Module({
@@ -16,7 +17,11 @@ import { RedisHealthController } from './redis.health.controller';
       imports: [CommonConfigModule],
       inject: [CommonConfigService],
       useFactory: (config: CommonConfigService) => ({
-        url: config.redis.url,
+        store: redisStore,
+        host: config.redis.host,
+        port: config.redis.port,
+        password: config.redis.password || undefined,
+        tls: config.redis.tls ? {} : undefined,
       }),
     }),
   ],

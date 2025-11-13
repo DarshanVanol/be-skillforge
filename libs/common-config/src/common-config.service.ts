@@ -25,6 +25,8 @@ export class CommonConfigService {
     const pass = this.configService.get<string>('MQ_PASS')!;
     const host = this.configService.get<string>('MQ_HOST')!;
     const port = this.configService.get<number>('MQ_PORT')!;
+    const mq_tls =
+      this.configService.get<boolean>('MQ_TLS') ?? this.env === 'production';
 
     const isDurableQueue =
       this.configService.get<boolean>('MQ_QUEUE_DURABLE') ??
@@ -40,10 +42,11 @@ export class CommonConfigService {
       host,
       port,
       isDurableQueue,
+      mq_tls,
       aiServiceQueue,
       // A getter for the combined URL
       get url(): string {
-        return `amqps://${user}:${pass}@${host}:${port}`;
+        return `${mq_tls ? 'amqps' : 'amqp'}://${user}:${pass}@${host}:${port}`;
       },
     };
   }

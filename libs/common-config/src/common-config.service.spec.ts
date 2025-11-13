@@ -63,6 +63,7 @@ describe('CommonConfigService', () => {
         .mockReturnValueOnce('localhost')
         .mockReturnValueOnce(5672)
         .mockReturnValueOnce(true)
+        .mockReturnValueOnce(true)
         .mockReturnValueOnce('test_queue');
 
       const config = service.rabbitmq;
@@ -82,10 +83,55 @@ describe('CommonConfigService', () => {
         .mockReturnValueOnce('localhost')
         .mockReturnValueOnce(5672)
         .mockReturnValueOnce(true)
+        .mockReturnValueOnce(true)
         .mockReturnValueOnce('test_queue');
 
       const config = service.rabbitmq;
       expect(config.url).toBe('amqps://testuser:testpass@localhost:5672');
+    });
+
+    it('should generate correct url without tls', () => {
+      mockConfigService.get
+        .mockReturnValueOnce('testuser')
+        .mockReturnValueOnce('testpass')
+        .mockReturnValueOnce('localhost')
+        .mockReturnValueOnce(5672)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce('test_queue');
+
+      const config = service.rabbitmq;
+      expect(config.url).toBe('amqp://testuser:testpass@localhost:5672');
+    });
+
+    it('should default mq_tls to env === production when not set', () => {
+      mockConfigService.get
+        .mockReturnValueOnce('testuser') // MQ_USER
+        .mockReturnValueOnce('testpass') // MQ_PASS
+        .mockReturnValueOnce('localhost') // MQ_HOST
+        .mockReturnValueOnce(5672) // MQ_PORT
+        .mockReturnValueOnce(undefined) // MQ_TLS
+        .mockReturnValueOnce('production') // NODE_ENV (for this.env)
+        .mockReturnValueOnce(true) // MQ_QUEUE_DURABLE
+        .mockReturnValueOnce('test_queue'); // MQ_AI_SERVICE_QUEUE
+
+      const config = service.rabbitmq;
+      expect(config.mq_tls).toBe(true);
+    });
+
+    it('should default mq_tls to false when env is not production', () => {
+      mockConfigService.get
+        .mockReturnValueOnce('testuser') // MQ_USER
+        .mockReturnValueOnce('testpass') // MQ_PASS
+        .mockReturnValueOnce('localhost') // MQ_HOST
+        .mockReturnValueOnce(5672) // MQ_PORT
+        .mockReturnValueOnce(undefined) // MQ_TLS
+        .mockReturnValueOnce('development') // NODE_ENV (for this.env)
+        .mockReturnValueOnce(true) // MQ_QUEUE_DURABLE
+        .mockReturnValueOnce('test_queue'); // MQ_AI_SERVICE_QUEUE
+
+      const config = service.rabbitmq;
+      expect(config.mq_tls).toBe(false);
     });
 
     it('should default isDurableQueue to env === production when not set', () => {
@@ -94,12 +140,28 @@ describe('CommonConfigService', () => {
         .mockReturnValueOnce('testpass') // MQ_PASS
         .mockReturnValueOnce('localhost') // MQ_HOST
         .mockReturnValueOnce(5672) // MQ_PORT
+        .mockReturnValueOnce(true) // MQ_TLS
         .mockReturnValueOnce(undefined) // MQ_QUEUE_DURABLE
         .mockReturnValueOnce('production') // NODE_ENV (for this.env)
         .mockReturnValueOnce('test_queue'); // MQ_AI_SERVICE_QUEUE
 
       const config = service.rabbitmq;
       expect(config.isDurableQueue).toBe(true);
+    });
+
+    it('should default isDurableQueue to false when env is not production', () => {
+      mockConfigService.get
+        .mockReturnValueOnce('testuser') // MQ_USER
+        .mockReturnValueOnce('testpass') // MQ_PASS
+        .mockReturnValueOnce('localhost') // MQ_HOST
+        .mockReturnValueOnce(5672) // MQ_PORT
+        .mockReturnValueOnce(true) // MQ_TLS
+        .mockReturnValueOnce(undefined) // MQ_QUEUE_DURABLE
+        .mockReturnValueOnce('development') // NODE_ENV (for this.env)
+        .mockReturnValueOnce('test_queue'); // MQ_AI_SERVICE_QUEUE
+
+      const config = service.rabbitmq;
+      expect(config.isDurableQueue).toBe(false);
     });
   });
 

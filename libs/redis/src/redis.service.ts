@@ -23,11 +23,7 @@ export class RedisService {
   // Cache Manager
   // -------------------------------------------------------------------
   async set<T>(key: string, value: T, ttlSeconds?: number) {
-    await this.cache.set(
-      key,
-      value,
-      ttlSeconds ? ttlSeconds * 1000 : undefined,
-    );
+    await this.cache.set(key, value, ttlSeconds ? ttlSeconds : undefined);
   }
 
   async get<T>(key: string): Promise<T | null> {
