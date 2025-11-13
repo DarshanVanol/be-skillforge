@@ -26,6 +26,12 @@ describe('RedisService', () => {
     on: jest.fn(),
     expire: jest.fn(),
     ping: jest.fn(),
+    xadd: jest.fn(),
+    xgroup: jest.fn(),
+    xreadgroup: jest.fn(),
+    xack: jest.fn(),
+    xpending: jest.fn(),
+    xclaim: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -270,6 +276,174 @@ describe('RedisService', () => {
         status: 'down',
         error: 'Error: Connection refused',
       });
+    });
+  });
+
+  describe('addToStream', () => {
+    it('should add message to stream', async () => {
+      const messageId = '1234567890-0';
+      mockRawClient.xadd.mockResolvedValue(messageId);
+
+      const data = { task: 'process', userId: '123' };
+      const result = await service.addToStream('work-queue', data);
+
+      expect(result).toBe(messageId);
+      expect(mockRawClient.xadd).toHaveBeenCalledWith(
+        'work-queue',
+        '*',
+        'task',
+        'process',
+        'userId',
+        '123',
+      );
+    });
+
+    it('should handle empty data object', async () => {
+      mockRawClient.xadd.mockResolvedValue('1234567890-0');
+
+      const result = await service.addToStream('stream', {});
+
+      expect(result).toBe('1234567890-0');
+      expect(mockRawClient.xadd).toHaveBeenCalledWith('stream', '*');
+    });
+
+    it('should return empty string when xadd returns null', async () => {
+      mockRawClient.xadd.mockResolvedValue(null);
+
+      const result = await service.addToStream('stream', { key: 'value' });
+
+      expect(result).toBe('');
+    });
+  });
+
+  describe('consumeStream', () => {
+    // Note: consumeStream contains an infinite loop, making comprehensive testing impractical
+    // We only test the initial group creation logic
+
+    it('should handle consumer group creation error', async () => {
+      const error = new Error('Some other error');
+      mockRawClient.xgroup.mockRejectedValue(error);
+
+      const callback = jest.fn();
+
+      await expect(
+        service.consumeStream('stream', 'group', 'consumer', callback),
+      ).rejects.toThrow('Some other error');
+    });
+  });
+
+  describe('getPendingMessages', () => {
+    it('should return pending messages', async () => {
+      mockRawClient.xpending
+        .mockResolvedValueOnce([2, '1234-0', '1234-1', []])
+        .mockResolvedValueOnce([
+          ['1234-0', 'consumer1', 5000],
+          ['1234-1', 'consumer2', 3000],
+        ]);
+
+      const result = await service.getPendingMessages('stream', 'group');
+
+      expect(result).toEqual([
+        { id: '1234-0', consumer: 'consumer1', idleTime: 5000 },
+        { id: '1234-1', consumer: 'consumer2', idleTime: 3000 },
+      ]);
+    });
+
+    it('should return empty array when no pending messages', async () => {
+      mockRawClient.xpending.mockResolvedValue([0]);
+
+      const result = await service.getPendingMessages('stream', 'group');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle null response', async () => {
+      mockRawClient.xpending.mockResolvedValue(null);
+
+      const result = await service.getPendingMessages('stream', 'group');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle empty array response', async () => {
+      mockRawClient.xpending.mockResolvedValue([]);
+
+      const result = await service.getPendingMessages('stream', 'group');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('claimPendingMessages', () => {
+    it('should claim stuck messages', async () => {
+      mockRawClient.xpending
+        .mockResolvedValueOnce([2, '1234-0', '1234-1', []])
+        .mockResolvedValueOnce([
+          ['1234-0', 'consumer1', 6000],
+          ['1234-1', 'consumer2', 7000],
+        ]);
+      mockRawClient.xclaim.mockResolvedValue([]);
+
+      const result = await service.claimPendingMessages(
+        'stream',
+        'group',
+        'new-consumer',
+        5000,
+      );
+
+      expect(result).toBe(2);
+      expect(mockRawClient.xclaim).toHaveBeenCalledWith(
+        'stream',
+        'group',
+        'new-consumer',
+        5000,
+        '1234-0',
+        '1234-1',
+      );
+    });
+
+    it('should return 0 when no stuck messages', async () => {
+      mockRawClient.xpending
+        .mockResolvedValueOnce([1, '1234-0', '1234-0', []])
+        .mockResolvedValueOnce([['1234-0', 'consumer1', 2000]]);
+
+      const result = await service.claimPendingMessages(
+        'stream',
+        'group',
+        'consumer',
+        5000,
+      );
+
+      expect(result).toBe(0);
+      expect(mockRawClient.xclaim).not.toHaveBeenCalled();
+    });
+
+    it('should only claim messages exceeding idle time', async () => {
+      mockRawClient.xpending
+        .mockResolvedValueOnce([3, '1234-0', '1234-2', []])
+        .mockResolvedValueOnce([
+          ['1234-0', 'consumer1', 6000],
+          ['1234-1', 'consumer2', 3000],
+          ['1234-2', 'consumer3', 8000],
+        ]);
+      mockRawClient.xclaim.mockResolvedValue([]);
+
+      const result = await service.claimPendingMessages(
+        'stream',
+        'group',
+        'new-consumer',
+        5000,
+      );
+
+      expect(result).toBe(2);
+      expect(mockRawClient.xclaim).toHaveBeenCalledWith(
+        'stream',
+        'group',
+        'new-consumer',
+        5000,
+        '1234-0',
+        '1234-2',
+      );
     });
   });
 });

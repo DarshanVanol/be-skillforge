@@ -17,6 +17,12 @@ async function bootstrap() {
       queueOptions: {
         durable: configService.rabbitmq.isDurableQueue,
       },
+      noAck: false, // Require manual acknowledgment (matches client config)
+      prefetchCount: 10, // Fair distribution: each replica gets max 10 messages
+      socketOptions: {
+        heartbeatIntervalInSeconds: 30, // Keep connection alive
+        reconnectTimeInSeconds: 5, // Auto-reconnect if connection drops
+      },
     },
   });
   app.enableShutdownHooks();
