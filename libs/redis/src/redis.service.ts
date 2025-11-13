@@ -1,111 +1,102 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager'; // Type for high-level caching interface
-import Redis from 'ioredis'; // Type for the raw client
-import { REDIS_CLIENT } from './redis-client.provider';
+import type { Cache } from 'cache-manager';
+import Redis, { Cluster } from 'ioredis';
+import {
+  REDIS_CLIENT,
+  REDIS_PUBLISHER,
+  REDIS_SUBSCRIBER,
+} from './redis-client.provider';
 
-/**
- * The RedisService acts as the primary interface for all Redis interactions
- * within the application, abstracting away the Cache Manager and the raw ioredis client.
- */
 @Injectable()
 export class RedisService {
   private readonly logger = new Logger(RedisService.name);
-  /**
-   * @param cacheManager The high-level NestJS Cache interface for simple GET/SET/DEL operations.
-   * @param rawClient The raw ioredis client for advanced operations (Pub/Sub, Hashes, Lists, etc.).
-   */
+
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    @Inject(REDIS_CLIENT) private rawClient: Redis,
-  ) {
-    // Optional: Log successful injection
-    this.logger.log(
-      'RedisService initialized. Cache Manager and Raw Client available.',
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    @Inject(REDIS_CLIENT) private readonly client: Redis | Cluster,
+    @Inject(REDIS_PUBLISHER) private readonly publisher: Redis | Cluster,
+    @Inject(REDIS_SUBSCRIBER) private readonly subscriber: Redis | Cluster,
+  ) {}
+
+  // -------------------------------------------------------------------
+  // Cache Manager
+  // -------------------------------------------------------------------
+  async set<T>(key: string, value: T, ttlSeconds?: number) {
+    await this.cache.set(
+      key,
+      value,
+      ttlSeconds ? ttlSeconds * 1000 : undefined,
     );
   }
 
-  // --- 1. HIGH-LEVEL CACHING METHODS (Using NestJS Cache Manager) ---
-
-  /**
-   * Stores a value under a key with an optional time-to-live (TTL).
-   * @param key The cache key.
-   * @param value The value to store.
-   * @param ttlSeconds The TTL in seconds. If 0 or undefined, uses default.
-   */
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const ttlMilliseconds = ttlSeconds ? ttlSeconds * 1000 : undefined;
-
-    // The cache manager usually handles serialization/deserialization for basic types
-    await this.cacheManager.set(key, value, ttlMilliseconds);
-  }
-
-  /**
-   * Retrieves a value by key.
-   * @param key The cache key.
-   * @returns The cached value or null if not found.
-   */
   async get<T>(key: string): Promise<T | null> {
-    const value = await this.cacheManager.get<T>(key);
-    return value || null;
+    return (await this.cache.get<T>(key)) ?? null;
   }
 
-  /**
-   * Deletes a key from the cache.
-   * @param key The cache key to delete.
-   */
-  async del(key: string): Promise<void> {
-    await this.cacheManager.del(key);
+  async del(key: string) {
+    return this.cache.del(key);
   }
 
-  /**
-   * Increments the number stored at key by one.
-   * @param key The cache key.
-   */
-  async incr(key: string): Promise<number> {
-    // Note: cache-manager doesn't always expose INCR directly,
-    // but the underlying store (ioredis) does. For simplicity and robustness,
-    // we use the raw client for operations like INCR/DECR.
-    return this.rawClient.incr(key);
+  // -------------------------------------------------------------------
+  // Raw Redis
+  // -------------------------------------------------------------------
+  incr(key: string) {
+    return this.client.incr(key);
   }
 
-  // --- 2. RAW CLIENT ACCESS (For Advanced Operations) ---
-
-  /**
-   * Exposes the raw ioredis client instance.
-   * Use this for complex operations like Pub/Sub, Pipelines, or ZSET/HSET commands.
-   */
-  getRawClient(): Redis {
-    return this.rawClient;
+  hSet(key: string, field: string, value: string) {
+    return this.client.hset(key, field, value);
   }
 
-  // --- 3. ADVANCED WRAPPER METHODS (Using Raw Client) ---
-
-  /**
-   * Retrieves all fields and values of the hash stored at key.
-   * @param key The hash key.
-   */
-  async hGetAll(key: string): Promise<Record<string, string>> {
-    return this.rawClient.hgetall(key);
+  hGetAll(key: string) {
+    return this.client.hgetall(key);
   }
 
-  /**
-   * Sets the specified fields to their respective values in the hash stored at key.
-   * @param key The hash key.
-   * @param field The field name.
-   * @param value The field value.
-   */
-  async hSet(key: string, field: string, value: string): Promise<number> {
-    return this.rawClient.hset(key, field, value);
+  // -------------------------------------------------------------------
+  // Pub/Sub
+  // -------------------------------------------------------------------
+  publish(channel: string, message: unknown) {
+    const payload =
+      typeof message === 'string' ? message : JSON.stringify(message);
+    return this.publisher.publish(channel, payload);
   }
 
-  /**
-   * Publishes a message to the specified channel.
-   * @param channel The channel name.
-   * @param message The message content (string).
-   * @returns The number of clients that received the message.
-   */
-  async publish(channel: string, message: string): Promise<number> {
-    return this.rawClient.publish(channel, message);
+  async subscribe(channel: string, callback: (msg: string) => void) {
+    await this.subscriber.subscribe(channel);
+    this.subscriber.on('message', (ch: string, msg: string) => {
+      if (ch === channel) callback(msg);
+    });
+  }
+
+  // -------------------------------------------------------------------
+  // DISTRIBUTED RATE LIMITER (per user / IP / route)
+  // -------------------------------------------------------------------
+  async rateLimit(key: string, limit: number, windowSec: number) {
+    const now = Date.now();
+    const resetAt = Math.floor(now / 1000) + windowSec;
+
+    const count = await this.client.incr(key);
+    if (count === 1) {
+      await this.client.expire(key, windowSec);
+    }
+
+    return {
+      allowed: count <= limit,
+      remaining: Math.max(0, limit - count),
+      resetAt,
+    };
+  }
+
+  // -------------------------------------------------------------------
+  // Health check
+  // -------------------------------------------------------------------
+  async healthCheck() {
+    try {
+      await this.client.ping();
+      return { status: 'up' };
+    } catch (e) {
+      return { status: 'down', error: String(e) };
+    }
   }
 }

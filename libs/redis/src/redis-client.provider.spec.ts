@@ -2,9 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommonConfigService } from '@app/common-config';
 import {
   RedisClientManager,
-  RawRedisClientDefinition,
+  RedisClientProviders,
+  REDIS_CLIENT,
 } from './redis-client.provider';
 import Redis from 'ioredis';
+import { FactoryProvider } from '@nestjs/common';
 
 jest.mock('ioredis');
 
@@ -61,7 +63,11 @@ describe('RedisClientManager', () => {
   });
 
   it('should create Redis client with config url', () => {
-    expect(Redis).toHaveBeenCalledWith('redis://localhost:6379');
+    expect(Redis).toHaveBeenCalledTimes(3); // client, publisher, subscriber
+    expect(Redis).toHaveBeenCalledWith(
+      'redis://localhost:6379',
+      expect.any(Object),
+    );
   });
 
   it('should register error and connect handlers', () => {
@@ -86,45 +92,45 @@ describe('RedisClientManager', () => {
     expect(connectHandler).toBeDefined();
   });
 
-  describe('getRawClient', () => {
+  describe('getClient', () => {
     it('should return raw Redis client', () => {
-      const client = manager.getRawClient();
+      const client = manager.getClient();
       expect(client).toBe(mockRedisInstance);
     });
   });
 
   describe('onModuleDestroy', () => {
-    it('should quit Redis connection', async () => {
+    it('should quit all Redis connections', async () => {
       await manager.onModuleDestroy();
-      expect(quitMock).toHaveBeenCalled();
+      expect(quitMock).toHaveBeenCalledTimes(3); // client, publisher, subscriber
     });
   });
 });
 
-describe('RawRedisClientDefinition', () => {
-  it('should have correct provider configuration', () => {
-    const provider = RawRedisClientDefinition as {
-      provide: string;
-      inject: unknown[];
-      useFactory: (manager: RedisClientManager) => Redis;
-    };
-    expect(provider.provide).toBe('REDIS_CLIENT');
-    expect(provider.inject).toEqual([RedisClientManager]);
-    expect(provider.useFactory).toBeDefined();
+describe('RedisClientProviders', () => {
+  it('should have correct provider configuration for REDIS_CLIENT', () => {
+    const clientProvider = RedisClientProviders.find(
+      (p) => (p as FactoryProvider).provide === REDIS_CLIENT,
+    ) as FactoryProvider;
+    expect(clientProvider).toBeDefined();
+    expect(clientProvider.inject).toEqual([RedisClientManager]);
+    expect(clientProvider.useFactory).toBeDefined();
   });
 
   it('should return client from factory', () => {
-    const getRawClientSpy = jest.fn().mockReturnValue('mock-client');
+    const getClientSpy = jest.fn().mockReturnValue('mock-client');
     const mockManager = {
-      getRawClient: getRawClientSpy,
+      getClient: getClientSpy,
     } as unknown as RedisClientManager;
 
-    const provider = RawRedisClientDefinition as {
-      useFactory: (manager: RedisClientManager) => Redis;
-    };
-    const result = provider.useFactory(mockManager);
+    const clientProvider = RedisClientProviders.find(
+      (p) => (p as FactoryProvider).provide === REDIS_CLIENT,
+    ) as FactoryProvider;
+    const result = (
+      clientProvider.useFactory as (m: RedisClientManager) => Redis
+    )(mockManager);
 
     expect(result).toBe('mock-client');
-    expect(getRawClientSpy).toHaveBeenCalled();
+    expect(getClientSpy).toHaveBeenCalled();
   });
 });

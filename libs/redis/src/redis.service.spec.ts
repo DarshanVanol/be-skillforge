@@ -1,12 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { RedisService } from './redis.service';
-import { REDIS_CLIENT } from './redis-client.provider';
+import {
+  REDIS_CLIENT,
+  REDIS_PUBLISHER,
+  REDIS_SUBSCRIBER,
+} from './redis-client.provider';
 import { Logger } from '@nestjs/common';
 
 describe('RedisService', () => {
   let service: RedisService;
-  let logSpy: jest.SpyInstance;
 
   const mockCacheManager = {
     set: jest.fn(),
@@ -22,7 +25,7 @@ describe('RedisService', () => {
   };
 
   beforeEach(async () => {
-    logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -33,6 +36,14 @@ describe('RedisService', () => {
         },
         {
           provide: REDIS_CLIENT,
+          useValue: mockRawClient,
+        },
+        {
+          provide: REDIS_PUBLISHER,
+          useValue: mockRawClient,
+        },
+        {
+          provide: REDIS_SUBSCRIBER,
           useValue: mockRawClient,
         },
       ],
@@ -48,12 +59,6 @@ describe('RedisService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-
-  it('should log initialization message', () => {
-    expect(logSpy).toHaveBeenCalledWith(
-      'RedisService initialized. Cache Manager and Raw Client available.',
-    );
   });
 
   describe('set', () => {
@@ -116,14 +121,6 @@ describe('RedisService', () => {
 
       expect(result).toBe(5);
       expect(mockRawClient.incr).toHaveBeenCalledWith('counter');
-    });
-  });
-
-  describe('getRawClient', () => {
-    it('should return raw Redis client', () => {
-      const client = service.getRawClient();
-
-      expect(client).toBe(mockRawClient);
     });
   });
 
