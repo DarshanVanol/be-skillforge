@@ -25,8 +25,17 @@ export const GoalAnalyzerAnnotation = Annotation.Root({
     goalType: Annotation<string>(),
     goal: Annotation<TitleDescriptionType>(),
     topics: Annotation<TitleDescriptionType[]>(),
-    subtopics: Annotation<Record<string, TitleDescriptionType[]>>(),
-    resources: Annotation<Record<string, ResourceAnnotationType[]>>(),
-    projects: Annotation<Record<string, ProjectAnnotationType>>(),
+    subtopics: Annotation<Record<string, TitleDescriptionType[]>>({
+        reducer: (left, right) => ({ ...left, ...right }),
+        default: () => ({}),
+    }),
+    resources: Annotation<Record<string, ResourceAnnotationType[]>>({
+        reducer: (left, right) => ({ ...left, ...right }),
+        default: () => ({}),
+    }),
+    projects: Annotation<Record<string, ProjectAnnotationType>>({
+        reducer: (left, right) => ({ ...left, ...right }),
+        default: () => ({}),
+    }),
 });
 

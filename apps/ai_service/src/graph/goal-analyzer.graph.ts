@@ -1,6 +1,6 @@
 
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { ChatGroq } from '@langchain/groq';
 import { GoalAnalyzerAnnotation, TitleDescriptionType } from './state.annotation';
 import { BaseMessage, SystemMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import { END, Send, START, StateGraph } from '@langchain/langgraph';
@@ -35,7 +35,9 @@ export class GoalAnalyzerGraph {
             .addNode('topicGenerator', this.topicGenerator.bind(this))
             .addNode('subtopicGenerator', this.subtopicGenerator.bind(this))
             .addNode('resourceGenerator', this.resourceGenerator.bind(this))
+            .addNode('resourceFanOutGenerator', this.resourceFanOutGenerator.bind(this))
             .addNode('projectGenerator', this.projectGenerator.bind(this))
+            .addNode('projectFanOutGenerator', this.projectFanOutGenerator.bind(this))
             .addEdge(START, 'goalAnalyzer')
             .addConditionalEdges('goalAnalyzer', (state) => {
                 if (state.goalType === 'broad' || state.goalType === 'small') {
@@ -46,18 +48,24 @@ export class GoalAnalyzerGraph {
                 }
                 return END;
             })
-            .addEdge('topicGenerator', END)
+            .addConditionalEdges('topicGenerator', this.combinedFanout.bind(this))
+            .addEdge('subtopicGenerator', END)
+            .addEdge('resourceGenerator', END)
+            .addEdge('projectGenerator', END)
+            .addEdge('resourceFanOutGenerator', END)
+            .addEdge('projectFanOutGenerator', END)
             .compile();
     }
 
     private goalAnalyzerModel() {
-        const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+        z
+        const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) {
-            this.logger.warn('Google GenAI API key not found. Set GOOGLE_GENAI_API_KEY or GOOGLE_API_KEY in environment.');
+            this.logger.warn('Groq API key not found. Set GROQ_API_KEY in environment.');
         }
-        return new ChatGoogleGenerativeAI({
-            model: 'gemini-2.0-flash-lite',
-            disableStreaming: true,
+        return new ChatGroq({
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
             apiKey,
         });
     }
@@ -82,7 +90,7 @@ export class GoalAnalyzerGraph {
 
         const humanMessage = new HumanMessage(
             {
-                name: "user",
+                name: "human",
                 content: `### User's Goal:
     ${userRequest}`,
             }
@@ -120,20 +128,20 @@ export class GoalAnalyzerGraph {
      */
     async analyzeGoal(goalText: string) {
         const initialState: typeof GoalAnalyzerAnnotation.State = {
-            messages: [new HumanMessage(goalText)],
-        } as any; // cast because we only need messages for now
+            userRequest: goalText,
+        } as any;
         const result = await this.graph().invoke(initialState);
         return result;
     }
 
     private topicGeneratorModel() {
-        const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+        const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) {
-            this.logger.warn('Google GenAI API key not found. Set GOOGLE_GENAI_API_KEY or GOOGLE_API_KEY in environment.');
+            this.logger.warn('Groq API key not found. Set GROQ_API_KEY in environment.');
         }
-        return new ChatGoogleGenerativeAI({
-            model: 'gemini-2.0-flash-lite',
-            disableStreaming: true,
+        return new ChatGroq({
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
             apiKey,
         });
     }
@@ -169,8 +177,9 @@ export class GoalAnalyzerGraph {
         const model = this.topicGeneratorModel();
         const prompt = this.topicGeneratorPrompt(state.goal);
         const response = await model.withStructuredOutput(this.topicResponseFormat()).invoke([prompt]);
+        let id = 0;
         state.topics = response.topics.map((topic: any) => ({
-            id: `topic_${Date.now()}`,
+            id: `topic_${id++}`,
             title: topic.title,
             description: topic.description,
         }));
@@ -178,13 +187,13 @@ export class GoalAnalyzerGraph {
     }
 
     private subtopicGeneratorModel() {
-        const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+        const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) {
-            this.logger.warn('Google GenAI API key not found. Set GOOGLE_GENAI_API_KEY or GOOGLE_API_KEY in environment.');
+            this.logger.warn('Groq API key not found. Set GROQ_API_KEY in environment.');
         }
-        return new ChatGoogleGenerativeAI({
-            model: 'gemini-2.0-flash-lite',
-            disableStreaming: true,
+        return new ChatGroq({
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
             apiKey,
         });
     }
@@ -217,33 +226,58 @@ export class GoalAnalyzerGraph {
 
     }
 
-    private async subtopicGenerator(state: typeof GoalAnalyzerAnnotation.State, topic: TitleDescriptionType) {
+    private async subtopicGenerator(topic: TitleDescriptionType) {
         const model = this.subtopicGeneratorModel();
         const prompt = this.subtopicGeneratorPrompt(topic);
         const response = await model.withStructuredOutput(this.subtopicResponseFormat()).invoke([prompt]);
+        let id = 0;
         const subtopics = response.subtopics.map((subtopic: any) => ({
-            id: `subtopic_${Date.now()}`,
+            id: `subtopic_${id++}`,
             title: subtopic.title,
             description: subtopic.description,
         }));
-        if (!state.subtopics) {
-            state.subtopics = {};
-        }
-        state.subtopics[topic.id] = subtopics;
-        return state;
+
+        // Return the subtopics keyed by topic ID for state merging
+        return {
+            subtopics: {
+                [topic.id]: subtopics
+            }
+        };
     }
 
-    private async subtopicFanout(state: typeof GoalAnalyzerAnnotation.State) {
-        return state.topics.map((topic) => {
-            return new Send("subtopicGenerator", topic);
-        });
+    private async combinedFanout(state: typeof GoalAnalyzerAnnotation.State) {
+
+        const sends: Send[] = [];
+
+        // Subtopics for broad goals
+        if (state.goalType === 'broad' && state.topics?.length > 0) {
+            state.topics.forEach((topic) => {
+                sends.push(new Send("subtopicGenerator", topic));
+            });
+        }
+
+        // Resources for broad and small goals
+        if ((state.goalType === 'broad' || state.goalType === 'small') && state.topics?.length > 0) {
+            state.topics.forEach((topic) => {
+                sends.push(new Send("resourceFanOutGenerator", topic));
+            });
+        }
+
+        // Projects for broad and small goals
+        if ((state.goalType === 'broad' || state.goalType === 'small') && state.topics?.length > 0) {
+            state.topics.forEach((topic) => {
+                sends.push(new Send("projectFanOutGenerator", topic));
+            });
+        }
+
+        return sends;
     }
 
     private async resourceGeneratorPrompt(topic: TitleDescriptionType) {
         const systemMessage = new SystemMessage(
             {
                 name: "system",
-                content: `You are an expert AI Resource Generator. Your task is to generate relevant learning resources based on a user's topic description.
+                content: `You are an expert Resource Generator. Your task is to generate relevant learning resources based on a user's topic description.
     ### Instructions:
     1. Analyze the topic provided by the user.
     2. Generate a list of relevant learning resources (articles, tutorials, videos, courses).
@@ -267,9 +301,9 @@ export class GoalAnalyzerGraph {
         });
     }
 
-    private async resourceGenerator(state: typeof GoalAnalyzerAnnotation.State, topic: TitleDescriptionType) {
+    private async resourceGenerator(state: typeof GoalAnalyzerAnnotation.State) {
         const model = this.subtopicGeneratorModel();
-        const prompt = await this.resourceGeneratorPrompt(topic);
+        const prompt = await this.resourceGeneratorPrompt(state.goal);
         const response = await model.withStructuredOutput(this.resourceResponseFormat()).invoke([prompt]);
         const resources = response.resources.map((resource: any) => ({
             title: resource.title,
@@ -279,20 +313,27 @@ export class GoalAnalyzerGraph {
         if (!state.resources) {
             state.resources = {};
         }
-        state.resources[topic.id] = resources;
+        state.resources[state.goal.id] = resources;
         return state;
     }
 
-    private async resourceFanout(state: typeof GoalAnalyzerAnnotation.State, topic: TitleDescriptionType) {
-        if (state.goalType == 'broad') {
-            state.subtopics[topic.id].forEach((subtopic) => {
-                return new Send("resourceGenerator", subtopic);
-            });
-        } else if (state.goalType == 'small') {
-            return new Send("resourceGenerator", topic);
-        }
-        return;
+    private async resourceFanOutGenerator(topic: TitleDescriptionType) {
+        const model = this.subtopicGeneratorModel();
+        const prompt = await this.resourceGeneratorPrompt(topic);
+        const response = await model.withStructuredOutput(this.resourceResponseFormat()).invoke([prompt]);
+        const resources = response.resources.map((resource: any) => ({
+            title: resource.title,
+            link: resource.link,
+            type: resource.type,
+        }));
+
+        return {
+            resources: {
+                [topic.id]: resources
+            }
+        };
     }
+
 
     private async projectGeneratorPrompt(topic: TitleDescriptionType | string) {
         const systemMessage = new SystemMessage(
@@ -322,9 +363,9 @@ export class GoalAnalyzerGraph {
         });
     }
 
-    private async projectGenerator(state: typeof GoalAnalyzerAnnotation.State, topic: TitleDescriptionType | string) {
+    private async projectGenerator(state: typeof GoalAnalyzerAnnotation.State) {
         const model = this.subtopicGeneratorModel();
-        const prompt = await this.projectGeneratorPrompt(topic);
+        const prompt = await this.projectGeneratorPrompt(state.goal);
         const response = await model.withStructuredOutput(this.projectResponseFormat()).invoke([prompt]);
         const project = {
             name: response.project.name,
@@ -334,20 +375,24 @@ export class GoalAnalyzerGraph {
         if (!state.projects) {
             state.projects = {};
         }
-        const topicId = typeof topic === 'string' ? topic : topic.id;
-        state.projects[topicId] = project;
+        state.projects[state.goal.id] = project;
         return state;
     }
 
-    private async projectFanout(state: typeof GoalAnalyzerAnnotation.State, topic: TitleDescriptionType | string) {
-        if (state.goalType == 'broad') {
-            state.topics.forEach((topic) => {
-                return new Send("projectGenerator", topic);
-            });
-        } else if (state.goalType == 'specific') {
-            return new Send("projectGenerator", topic);
-        }
-        return;
+    private async projectFanOutGenerator(topic: TitleDescriptionType) {
+        const model = this.subtopicGeneratorModel();
+        const prompt = await this.projectGeneratorPrompt(topic);
+        const response = await model.withStructuredOutput(this.projectResponseFormat()).invoke([prompt]);
+        const project = {
+            name: response.project.name,
+            description: response.project.description,
+            difficulty: response.project.difficulty,
+        };
+        return {
+            projects: {
+                [topic.id]: project
+            }
+        };
     }
 
 
